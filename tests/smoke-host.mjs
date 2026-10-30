@@ -46,8 +46,10 @@ const llm = {
 }
 const tools = new Map()
 const contexts = []
+const commands = new Map()
 let handler = null
 const ctx = {
+  plugin(p) { p.apply({ commands: { register(def) { commands.set(def.name, def); return () => {} } }, effect(fn) { return fn() } }) },
   logger: () => ({ info() {}, warn() {} }),
   tools: { register(def) { tools.set(def.name, def); return () => {} } },
   systemPrompt: { context(c) { contexts.push(c); return () => {} } },
@@ -64,6 +66,7 @@ const plugin = await import('../lib/index.js')
 plugin.apply(ctx)
 assert.ok(tools.has('schedule_view') && tools.has('schedule_adjust'))
 assert.equal(contexts.length, 1)
+assert.ok(commands.has('life'), '/life registered')
 assert.ok(existsSync(path.join(tmp, 'daily-schedule', 'config.json')))
 store.updateConfig({ timeZone: 'Australia/Sydney', partnerName: '涛涛', extraRules: '住在悉尼的小公寓' })
 
@@ -97,7 +100,7 @@ assert.match(t, /她待会儿想做：12:00 吃午饭/)
 assert.match(t, /她今天早些时候：起床洗漱 → 挤地铁去公司/)
 // 说话方式：默认注入，去掉「按日程」口吻
 assert.match(t, /【怎么把这些带进聊天】/); assert.match(t, /不要说「按照日程」「按计划」/); assert.match(t, /涛涛问起时/)
-assert.match(t, /回复里不要提到/)
+assert.match(t, /回复里不要提到/); assert.match(t, /对方让你做正事.*认真把事做完/)
 {
   const facts = t.split('【怎么把这些带进聊天】')[0]
   assert.ok(!/按计划|按照日程|日程上|安排表/.test(facts), 'facts themselves avoid schedule-speak')
@@ -219,6 +222,41 @@ assert.equal(r.json.days[0].date, '2026-11-02')
   // schedule_view 也提醒别说「日程上」
   const view = await tools.get('schedule_view').execute({ day: 'today' })
   assert.match(String(view), /别提「日程」「计划」/)
+}
+
+// ---- 分会话注入：子代理不注；all 模式下 /life off 单独关；session 模式下 /life on 单独开 ----
+{
+  const { clearSessionCache } = await import('../lib/sessions.js')
+  const sess = (id, header = {}) => ({ id, header })
+  const asm = (session) => (session ? { agent: { session } } : {})
+  const inj = (session) => contexts[0].text(asm(session))
+  const life = (session, rawInput) => commands.get('life').handler({ agent: { session }, rawInput })
+  const S1 = sess('sess-aaaa-1111', { cwd: 'C:\\work\\proj' }); const S2 = sess('sess-bbbb-2222'); const SUB = sess('sess-sub', { origin: 'subagent', delegationDepth: 1 })
+  assert.equal(store.getConfig().inject.scope, 'all')
+  assert.match(inj(null), /此刻的生活/); assert.match(inj(S1), /此刻的生活/); assert.equal(inj(SUB), '', 'subagent never')
+  let out = life(S1, '')
+  assert.equal(out.kind, 'success'); assert.match(out.text, /正在注入/); assert.match(out.text, /跟随默认：所有会话都注入/)
+  out = life(S1, 'off')
+  assert.match(out.text, /关掉了.*的日常/); assert.equal(inj(S1), ''); assert.match(inj(S2), /此刻的生活/)
+  assert.match(life(S1, '').text, /没有注入.*单独设置过/)
+  assert.match(life(SUB, 'on').text, /子代理会话，始终不注入/); assert.equal(inj(SUB), '')
+  assert.equal(life(S1, 'banana').kind, 'error')
+  // 切到「只在打开的会话」
+  r = await j('/config', { inject: { scope: 'session' } })
+  assert.equal(r.json.config.inject.scope, 'session')
+  assert.equal(inj(S2), ''); assert.equal(inj(null), ''); assert.equal(inj(S1), '')
+  out = life(S2, '开')
+  assert.match(out.text, /打开了/); assert.match(inj(S2), /此刻的生活/)
+  assert.match(life(S1, 'auto').text, /恢复默认（只在打开的会话里注入）：现在不会注入/); assert.equal(inj(S1), '')
+  // HTTP：列出单独设置过的会话，能一键恢复默认；重启后还在（读文件）
+  r = await j('/state')
+  assert.equal(r.json.sessions.scope, 'session'); assert.deepEqual(r.json.sessions.overrides.map((o) => [o.id, o.on]), [['sess-bbbb-2222', true]])
+  clearSessionCache(); assert.match(inj(S2), /此刻的生活/)
+  r = await j('/session', { id: 'sess-bbbb-2222', on: null })
+  assert.equal(r.json.sessions.total, 0); assert.equal(inj(S2), '')
+  assert.equal((await j('/session', { on: true })).status, 400)
+  store.updateConfig({ inject: { scope: 'all' } })
+  assert.match(inj(S2), /此刻的生活/)
 }
 
 srv.close()

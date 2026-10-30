@@ -209,7 +209,7 @@ await new Promise((res) => srv.listen(0, '127.0.0.1', res))
 const B = `http://127.0.0.1:${srv.address().port}/api/daily-schedule`
 const j = async (p, body) => { const res = await fetch(B + p, body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); return { status: res.status, json: await res.json() } }
 let s = await j('/state?fresh=1')
-assert.match(s.json.build, /^v0\.[23]\.0$/)
+assert.match(s.json.build, /^v0\.\d+\.0$/)
 assert.equal(s.json.wardrobe.her.name, '鱼鱼')
 assert.equal(s.json.wardrobe.outfits.length, 4)
 assert.deepEqual(s.json.wardrobe.people.map((e) => e.name), ['阿星'])

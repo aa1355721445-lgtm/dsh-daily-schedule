@@ -70,7 +70,7 @@ o = txt(h(T.TypesTab, { state, onState() {}, toast }))
 assert.match(o, /\[input:上班日\]/); assert.match(o, /\[input:休息日\]/); assert.match(o, /工作日 \d+%/); assert.match(o, /周末 \d+%/); assert.match(o, /加一种类型/)
 // 设置
 o = txt(h(T.SettingsTab, { state, onState() {}, toast }))
-assert.match(o, /让她像真人一样提起自己的生活/); assert.match(o, /\[textarea:【怎么把这些带进聊天】/); assert.match(o, /正在用默认的说话方式/); assert.doesNotMatch(o, /恢复默认/)
+assert.match(o, /让她像真人一样提起自己的生活/); assert.match(o, /\[textarea:【怎么把这些带进聊天】/); assert.match(o, /正在用默认的说话方式/); assert.doesNotMatch(o, /已自定义/)
 {
   const custom = { ...state, config: { ...state.config, inject: { ...state.config.inject, voice: '【口吻】软软的' } } }
   const oc = txt(h(T.SettingsTab, { state: custom, onState() {}, toast }))
@@ -154,3 +154,13 @@ assert.match(o, /10月29日/); assert.match(o, /这一天的穿搭/); assert.mat
 FakeReact.__override([ws, '', 'schedule', null])
 assert.match(txt(h(T.Section, {})), /这一天的穿搭/)
 console.log('ALL V2 CLIENT TESTS PASSED')
+
+// ======================= v0.4：分会话注入 =======================
+assert.equal(ws.sessions.scope, 'all'); assert.equal(ws.sessions.total, 0)
+o = txt(h(T.SettingsTab, { state: ws, onState() {}, toast }))
+assert.match(o, /注入到哪些会话/); assert.match(o, /所有会话/); assert.match(o, /只在打开的会话/); assert.match(o, /\/life off/); assert.match(o, /还没有单独设置过的会话/)
+o = txt(h(T.SettingsTab, { state: { ...ws, config: { ...ws.config, inject: { ...ws.config.inject, scope: 'session' } } }, onState() {}, toast }))
+assert.match(o, /发 \/life on/)
+o = txt(h(T.SessionOverrides, { sessions: { scope: 'all', total: 2, overrides: [{ id: 'abcdef123456', on: false, at: '2026-10-30T01:00:00Z', cwd: 'C:\\work\\proj' }, { id: 'zzz999', on: true, at: '', cwd: '' }] }, onState() {}, toast }))
+assert.match(o, /单独设置过的会话（2）/); assert.match(o, /已关掉 abcdef12 proj/); assert.match(o, /已打开 zzz999/); assert.match(o, /恢复默认/)
+console.log('ALL V4 CLIENT TESTS PASSED')

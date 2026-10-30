@@ -1,6 +1,6 @@
 {
   "name": "dsh-daily-schedule",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "每日日程：每晚按人设和日程类型生成角色第二天的全天日程，联动生图工作室给每段配好穿搭和场景，把日期、时间、此刻在做什么、穿着什么注入对话，角色可以自己查看和临时调整。",
