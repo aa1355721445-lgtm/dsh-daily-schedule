@@ -1,0 +1,53 @@
+{
+  "name": "dsh-daily-schedule",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "每日日程：每晚按人设和日程类型生成角色第二天的全天日程，联动生图工作室给每段配好穿搭和场景，把日期、时间、此刻在做什么、穿着什么注入对话，角色可以自己查看和临时调整。",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "companion",
+    "schedule",
+    "roleplay"
+  ],
+  "homepage": "https://github.com/aa1355721445-lgtm/dsh-daily-schedule#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aa1355721445-lgtm/dsh-daily-schedule.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aa1355721445-lgtm/dsh-daily-schedule/issues"
+  },
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
+  },
+  "license": "MIT",
+  "scripts": {
+    "test": "node tests/smoke-host.mjs && node tests/smoke-wardrobe.mjs && node tests/smoke-client.mjs",
+    "check": "node --check lib/client.js"
+  }
+}
